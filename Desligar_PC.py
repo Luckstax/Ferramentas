@@ -7,15 +7,14 @@ def get_current_time():
 
 tempo = datetime.timedelta(hours=2).total_seconds()
 
-def mais120(tempo, diferenca_tempo):
-    novo_tempo = (tempo + diferenca_tempo).total_seconds()
-    os.system('shutdown /a')
-    os.system(f'shutdown /s /t {int(novo_tempo)}')
+def dezdanoite():
+    os.system(f'shutdown /a ')
+    agora = datetime.datetime.now()
+    hora_desligar = datetime.time(22, 0)
+    momento_desligar = datetime.datetime.combine(agora.date(), hora_desligar)
+    diferenca_tempo = (momento_desligar - agora).total_seconds()
+    os.system(f'shutdown /s /t {int(diferenca_tempo)}')
 
-def menos120(tempo, diferenca_tempo):
-    novo_tempo = (tempo - diferenca_tempo).total_seconds()
-    os.system('shutdown /a')
-    os.system(f'shutdown /s /t {int(novo_tempo)}')
 
 def schedule_shutdown_or_restart(hora_marcada, opcao, escolha):
     agora = get_current_time()
@@ -68,7 +67,7 @@ Entry(root, textvariable=hora_marcada).pack()
 Button(root, text="Confirmar", command=lambda: schedule_shutdown_or_restart(hora_marcada.get(), opcao.get(), escolha.get())).pack()
 Button(root, text="Cancelar desligamento", command=cancelar).pack()
 
-Button(root,text= "Acrescentar 2 horas", command= lambda:mais120(tempo, diferenca_tempo) ).pack()
-Button(root, text= "Diminutir 2 horas", command= lambda:menos120(tempo, diferenca_tempo) ).pack()
+Button(root,text= "Desligar as 22", command= lambda:dezdanoite() ).pack()
+
 
 root.mainloop()
