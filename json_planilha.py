@@ -1,41 +1,44 @@
 import json
 import pandas as pd
 
-def extrair_dados(nome_arquivo):
-    with open(nome_arquivo, 'r', encoding='utf-8') as f:
-        dados = json.load(f)
-    
-    lista_limpa = []
-    # O formato do Instagram pode variar, esse loop garante a captura correta
-    for item in dados:
-        if 'string_list_data' in item:
-            user_data = item['string_list_data'][0]
-            lista_limpa.append({
-                'usuario': user_data['value'],
-                'link': user_data['href'],
-                'data': pd.to_datetime(user_data['timestamp'], unit='s')
-            })
-    return lista_limpa
+def gerar_planilha_seguindo(arquivo_json):
+    try:
+        with open(arquivo_json, 'r', encoding='utf-8') as f:
+            dados = json.load(f)
+        
+        # Acessando a lista correta dentro do JSON do Instagram
+        # O arquivo 'following.json' geralmente tem uma chave principal chamada 'relationships_following'
+        if isinstance(dados, dict) and 'relationships_following' in dados:
+            itens = dados['relationships_following']
+        else:
+            itens = dados
 
-# 1. Carregar os dados
-try:
-    seguidores = extrair_dados('followers_1.json')
-    seguindo = extrair_dados('following.json')
+        lista_seguindo = []
+        
+        for item in itens:
+            if 'string_list_data' in item:
+                for info in item['string_list_data']:
+                    lista_seguindo.append({
+                        'Usuário': info.get('value', 'N/A'),
+                        'Link': info.get('href', ''),
+                        'Timestamp': info.get('timestamp', 0)
+                    })
+        
+        df = pd.DataFrame(lista_seguindo)
 
-    df_seguidores = pd.DataFrame(seguidores)
-    df_seguindo = pd.DataFrame(seguindo)
+        # Converte o timestamp para data legível de forma segura
+        if not df.empty:
+            df['Data'] = pd.to_datetime(df['Timestamp'], unit='s', errors='coerce')
+            # Remove a coluna original de segundos para ficar limpo
+            df = df.drop(columns=['Timestamp'])
 
-    # 2. Identificar quem não te segue de volta
-    # (Pessoas que você segue mas não estão na lista de seguidores)
-    nao_seguem_de_volta = df_seguindo[~df_seguindo['usuario'].isin(df_seguidores['usuario'])]
+        nome_saida = 'seguindo_instagram.xlsx'
+        df.to_excel(nome_saida, index=False)
+        
+        print(f"Sucesso! {len(df)} usuários exportados para '{nome_saida}'.")
 
-    # 3. Exportar para Excel
-    with pd.ExcelWriter('analise_instagram.xlsx') as writer:
-        df_seguidores.to_sheet(writer, sheet_name='Seguidores', index=False)
-        df_seguindo.to_sheet(writer, sheet_name='Seguindo', index=False)
-        nao_seguem_de_volta.to_sheet(writer, sheet_name='Nao_me_seguem_de_volta', index=False)
+    except Exception as e:
+        print(f"Erro ao processar: {e}")
 
-    print("Sucesso! Planilha 'analise_instagram.xlsx' gerada.")
-
-except FileNotFoundError:
-    print("Erro: Certifique-se de que os arquivos .json estão na mesma pasta do script.")
+if __name__ == "__main__":
+    gerar_planilha_seguindo('following.json')
