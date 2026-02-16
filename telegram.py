@@ -2,7 +2,7 @@ import os
 from telegram import Bot
 
 # CONFIGURAÇÕES
-TOKEN = "SEU_TOKEN_DO_BOT"
+TOKEN = 8483143028:AAFwZlr4Btwdkbrx_jjNX7VjQBckgEqY57Y
 CHAT_ID = "SEU_CHAT_ID"  # pode ser ID de grupo ou canal (@nomedocanal ou número)
 PASTA = r"C:\caminho\da\sua\pasta"
 
