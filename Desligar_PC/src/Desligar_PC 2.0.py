@@ -2,8 +2,7 @@ import os
 import platform
 from datetime import datetime, timedelta
 import tkinter as tk
-from tkinter import messagebox
-
+from tkinter import messagebox, ttk
 
 # =========================
 # LÓGICA DE SISTEMA
@@ -12,117 +11,103 @@ from tkinter import messagebox
 def sistema_suportado():
     return platform.system() == "Windows"
 
-
 def executar_comando(acao: str, segundos: int):
-    if acao == "desligar":
+    acao_cmd = acao.lower()
+    if acao_cmd == "desligar":
         os.system(f"shutdown /s /t {segundos}")
-    elif acao == "reiniciar":
+    elif acao_cmd == "reiniciar":
         os.system(f"shutdown /r /t {segundos}")
 
-
-def cancelar_desligamento():
-    os.system("shutdown /a")
-
-
-# =========================
-# LÓGICA DE TEMPO
-# =========================
-
-def segundos_por_contagem(horas: int, minutos: int) -> int:
-    return horas * 3600 + minutos * 60
-
-
-def segundos_ate_horario(hora_str: str) -> int:
-    agora = datetime.now()
-    alvo = datetime.strptime(hora_str, "%H:%M").replace(
-        year=agora.year,
-        month=agora.month,
-        day=agora.day
-    )
-
-    if alvo <= agora:
-        alvo += timedelta(days=1)
-
-    return int((alvo - agora).total_seconds())
-
-
-# =========================
-# INTERFACE
-# =========================
-
-def executar():
-    if not sistema_suportado():
-        messagebox.showerror("Erro", "Sistema operacional não suportado.")
-        return
-
-    acao = acao_var.get()
-    modo = modo_var.get()
-
-    try:
-        if modo == "contagem":
-            horas = int(entry_horas.get())
-            minutos = int(entry_minutos.get())
-            segundos = segundos_por_contagem(horas, minutos)
-
-        else:
-            horario = entry_horario.get()
-            segundos = segundos_ate_horario(horario)
-
-    except ValueError:
-        messagebox.showerror("Erro", "Valores inválidos.")
-        return
-
-    if segundos <= 0:
-        messagebox.showerror("Erro", "Tempo deve ser maior que zero.")
-        return
-
-    executar_comando(acao, segundos)
-
-    horario_final = datetime.now() + timedelta(seconds=segundos)
-    messagebox.showinfo(
-        "Sucesso",
-        f"{acao.capitalize()} agendado para {horario_final.strftime('%H:%M:%S')}"
-    )
-
-
 def cancelar():
-    cancelar_desligamento()
-    messagebox.showinfo("Cancelado", "Ação cancelada com sucesso.")
-
+    os.system("shutdown /a")
+    messagebox.showinfo("Cancelado", "Agendamento cancelado com sucesso!")
 
 # =========================
-# JANELA
+# LÓGICA DE INTERFACE DINÂMICA
+# =========================
+
+def atualizar_interface(*args):
+    modo = modo_var.get()
+    if modo == "Contagem":
+        frame_horario_especifico.pack_forget()
+        frame_contagem.pack(pady=2)
+    else:
+        frame_contagem.pack_forget()
+        frame_horario_especifico.pack(pady=2)
+    
+    # Ajusta para uma altura bem pequena e justa
+    janela.geometry("320x140") 
+
+# =========================
+# INTERFACE PRINCIPAL
 # =========================
 
 janela = tk.Tk()
-janela.title("Agendador de Desligamento / Reinício")
-janela.geometry("380x320")
+janela.title("Power Manager")
+janela.geometry("320x140")
 janela.resizable(False, False)
 
-acao_var = tk.StringVar(value="desligar")
-modo_var = tk.StringVar(value="contagem")
+# --- Frame Topo (Ação e Modo) ---
+frame_top = tk.Frame(janela)
+frame_top.pack(pady=10)
 
-tk.Label(janela, text="Ação").pack()
-tk.Radiobutton(janela, text="Desligar", variable=acao_var, value="desligar").pack()
-tk.Radiobutton(janela, text="Reiniciar", variable=acao_var, value="reiniciar").pack()
+tk.Label(frame_top, text="Ação:").grid(row=0, column=0, padx=2)
+acao_var = tk.StringVar(value="Desligar")
+ttk.OptionMenu(frame_top, acao_var, "Desligar", "Desligar", "Reiniciar").grid(row=0, column=1)
 
-tk.Label(janela, text="Modo").pack(pady=5)
-tk.Radiobutton(janela, text="Contagem regressiva", variable=modo_var, value="contagem").pack()
-tk.Radiobutton(janela, text="Horário específico (HH:MM)", variable=modo_var, value="horario").pack()
+tk.Label(frame_top, text=" Modo:").grid(row=0, column=2, padx=2)
+modo_var = tk.StringVar(value="Contagem")
+modo_var.trace("w", atualizar_interface) # Apenas um trace é necessário
+ttk.OptionMenu(frame_top, modo_var, "Contagem", "Contagem", "Horário").grid(row=0, column=3)
 
-tk.Label(janela, text="Horas").pack()
-entry_horas = tk.Entry(janela)
-entry_horas.pack()
+# --- Container para Contagem Regressiva ---
+frame_contagem = tk.Frame(janela)
 
-tk.Label(janela, text="Minutos").pack()
-entry_minutos = tk.Entry(janela)
-entry_minutos.pack()
+# Label "Horas" na coluna 0, Entry na coluna 1
+tk.Label(frame_contagem, text="Horas:").grid(row=0, column=0, padx=2)
+entry_horas = tk.Entry(frame_contagem, width=5)
+entry_horas.grid(row=0, column=1, padx=5)
 
-tk.Label(janela, text="Horário (HH:MM)").pack(pady=5)
-entry_horario = tk.Entry(janela)
-entry_horario.pack()
+# Label "Minutos" na coluna 2, Entry na coluna 3
+tk.Label(frame_contagem, text="Minutos:").grid(row=0, column=2, padx=2)
+entry_minutos = tk.Entry(frame_contagem, width=5)
+entry_minutos.grid(row=0, column=3, padx=5)
 
-tk.Button(janela, text="Executar", command=executar).pack(pady=8)
-tk.Button(janela, text="Cancelar ação", command=cancelar).pack()
+# --- Container para Horário Específico ---
+frame_horario_especifico = tk.Frame(janela)
+tk.Label(frame_horario_especifico, text="Horário (HH:MM):").grid(row=0, column=0)
+entry_horario = tk.Entry(frame_horario_especifico, width=10)
+entry_horario.grid(row=0, column=1, padx=5)
 
+# --- Botões (Removido side=BOTTOM para colar nos campos) ---
+frame_btns = tk.Frame(janela)
+frame_btns.pack(pady=10) 
+
+def preparar_execucao():
+    try:
+        if modo_var.get() == "Contagem":
+            h = int(entry_horas.get() or 0)
+            m = int(entry_minutos.get() or 0)
+            segundos = h * 3600 + m * 60
+        else:
+            agora = datetime.now()
+            alvo = datetime.strptime(entry_horario.get(), "%H:%M").replace(
+                year=agora.year, month=agora.month, day=agora.day)
+            if alvo <= agora: alvo += timedelta(days=1)
+            segundos = int((alvo - agora).total_seconds())
+        
+        if segundos <= 0: raise ValueError
+        executar_comando(acao_var.get(), segundos)
+        messagebox.showinfo("Sucesso", "Agendado!")
+    except:
+        messagebox.showerror("Erro", "Formato inválido!")
+
+btn_exec = tk.Button(frame_btns, text="Executar", command=preparar_execucao, width=10, bg="#d1ffd1")
+btn_exec.pack(side=tk.LEFT, padx=5)
+
+btn_canc = tk.Button(frame_btns, text="Cancelar", command=cancelar, width=10, fg="red")
+btn_canc.pack(side=tk.LEFT, padx=5)
+
+# Inicializa
+atualizar_interface()
 janela.mainloop()
